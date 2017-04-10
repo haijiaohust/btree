@@ -1,16 +1,15 @@
 #ifndef _BTREE_H__
 #define _BTREE_H__
 
-#define M_NUM 5
+#define BTREE_T 3
 
 typedef int KeyType;
 
 typedef struct Btreenode{
-	char is_leaf;		//0 is leaf, 1 else;
+	char is_leaf;		//1 is leaf, 0 else;
 	int keynum;
-	KeyType key[M_NUM];
-	struct Btreenode* parent;
-	struct Btreenode* ptr[M_NUM + 1];
+	KeyType key[2 * BTREE_T - 1];
+	struct Btreenode* ptr[2 * BTREE_T];
 }Btreenode;
 
 typedef struct s_result{
@@ -28,5 +27,7 @@ void Btree_destory(Btreenode*);
 int Btree_search(Btreeroot*, KeyType);
 int Btree_insert(Btreeroot*, KeyType);
 void Btree_print(Btreenode*, int);
+s_result Btree_search_node(Btreenode*, KeyType);
+int Btree_delete(Btreeroot*, KeyType);
 
 #endif

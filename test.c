@@ -11,8 +11,8 @@ int main()
 	Btreeroot* root = Btree_create();
 	for(i = 0; i < len; i++){
 		Btree_insert(root, s[i]);
-		Btree_print(root->node, 1);
 	}
+	Btree_print(root->node, 1);
 	Btree_destory(root->node);
 	return 0;
 }

@@ -2,12 +2,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+//#define DEBUG_ON
+
 Btreeroot* Btree_create()
 {
+#ifdef DEBUG_ON
+	printf("create tree begin\n");
+#endif
 	Btreeroot* root = (Btreeroot*)malloc(sizeof(Btreeroot));
 	if(!root)
 		return NULL;
 	root->node = NULL;
+#ifdef DEBUG_ON
+	printf("create tree end %p\n", root);
+#endif
 	return root;
 }
 Btreenode* Btree_create_node()
@@ -32,17 +40,19 @@ void Btree_destory(Btreenode* p)
 	for(i = 0; i <= p->keynum; i++)
 		Btree_destory(p->ptr[i]);
 }
-s_result _Btree_search(Btreenode* node, KeyType key)
+s_result Btree_search_node(Btreenode* node, KeyType key)
 {
 	Btreenode* p = node;
 	int i = 0;
+	if(!p)
+		return (s_result){NULL, -1};
 	while(i < p->keynum && p->key[i] < key)
 		i++;
 	if(p->key[i] == key)
 		return (s_result){p, i};
 	if(!p->is_leaf)
 		return (s_result){NULL, -1};
-	return _Btree_search(p->ptr[i], key);
+	return Btree_search_node(p->ptr[i], key);
 }
 int Btree_search(Btreeroot* root, KeyType key)
 {
@@ -52,7 +62,7 @@ int Btree_search(Btreeroot* root, KeyType key)
 		.ptr = NULL,
 		.num = -1,
 	};
-	res = _Btree_search(root->node, key);
+	res = Btree_search_node(root->node, key);
 	return res.ptr ? 0 : -1;
 }
 Btreenode* _find_insert_pos(Btreeroot* root, KeyType key)
@@ -73,85 +83,62 @@ Btreenode* _find_insert_pos(Btreeroot* root, KeyType key)
 }
 void _Btree_insert_split(Btreeroot* root, Btreenode* node)
 {
+#ifdef DEBUG_ON
+	printf("insert split\n");
+#endif
 	int i;
 	int pos;
 	Btreenode* p = NULL;
 	Btreenode* q = NULL;
-	if(node->is_leaf){
-		p = Btree_create_node();
-		pos = (M_NUM) / 2;
-		p->keynum = node->keynum - pos - 1;
-		for(i = pos + 1; i < node->keynum; i++)
-			p->key[i - (pos + 1)] = node->key[i];
-		for(i = pos + 1; i <= node->keynum; i++)
-			p->ptr[i - (pos + 1)] = node->ptr[i];
-		node->keynum /= 2;
-		if(node->parent){
-			q = node->parent;
-			i = node->keynum - 1;
-			for(; q->key[i] > node->key[pos]; i--){
-				q->key[i + 1] = q->key[i];
-				q->ptr[i + 2] = q->ptr[i + 1];
-			}
-			q->key[i + 1] = node->key[pos];
-			q->ptr[i + 2] = q->ptr[i + 1];
-			q->ptr[i + 1] = p;
-			q->keynum++;
-			p->parent = q;
-			if(q->keynum == M_NUM)
-				_Btree_insert_split(root, q);
-		}
-		else{
-			q = Btree_create_node();
-			q->keynum = 1;
-			q->key[0] = node->key[pos];
-			q->is_leaf = 1;
-			q->ptr[0] = node;
-			q->ptr[1] = p;
 
-			root->node = q;
-			node->parent = q;
-			p->parent = q;
-		}
+	p = Btree_create_node();
+	pos = (M_NUM) / 2;
+	p->keynum = node->keynum - pos - 1;
+	for(i = pos + 1; i < node->keynum; i++){
+		p->key[i - (pos + 1)] = node->key[i];
+		node->key[i] = 0;
 	}
-	else{	//leaf node
-		p = Btree_create_node();
-		pos = (M_NUM) / 2;
-		p->keynum = node->keynum - pos - 1;
-		for(i = pos + 1; i < node->keynum; i++)
-			p->key[i - (pos + 1)] = node->key[i];
-		node->keynum /= 2;
-		if(node->parent){
-			q = node->parent;
-			i = node->keynum - 1;
-			for(; q->key[i] > node->key[pos]; i--){
-				q->key[i + 1] = q->key[i];
-				q->ptr[i + 2] = q->ptr[i + 1];
-			}
-			q->key[i + 1] = node->key[pos];
+	if(node->is_leaf)
+		for(i = pos + 1; i <= node->keynum; i++){
+			p->ptr[i - (pos + 1)] = node->ptr[i];
+			node->ptr[i] = NULL;
+		}
+	node->keynum /= 2;
+	p->is_leaf = node->is_leaf;
+	if(node->parent){
+		q = node->parent;
+		i = q->keynum - 1;
+		for(; q->key[i] > node->key[pos]; i--){
+			q->key[i + 1] = q->key[i];
 			q->ptr[i + 2] = q->ptr[i + 1];
-			q->ptr[i + 1] = p;
-			q->keynum++;
-			p->parent = q;
-			if(q->keynum == M_NUM)
-				_Btree_insert_split(root, q);
 		}
-		else{
-			q = Btree_create_node();
-			q->keynum = 1;
-			q->key[0] = node->key[pos];
-			q->is_leaf = 1;
-			q->ptr[0] = node;
-			q->ptr[1] = p;
+		q->key[i + 1] = node->key[pos];
+		node->key[pos] = 0;
+		q->ptr[i + 2] = p;
+		q->keynum++;
+		p->parent = q;
+		if(q->keynum == M_NUM)
+			_Btree_insert_split(root, q);
+	}
+	else{
+		q = Btree_create_node();
+		q->keynum = 1;
+		q->key[0] = node->key[pos];
+		node->key[pos] = 0;
+		q->is_leaf = 1;
+		q->ptr[0] = node;
+		q->ptr[1] = p;
 
-			root->node = q;
-			node->parent = q;
-			p->parent = q;
-		}
+		root->node = q;
+		node->parent = q;
+		p->parent = q;
 	}
 }
 int Btree_insert(Btreeroot* root, KeyType key)
 {
+#ifdef DEBUG_ON
+	printf("\ninsert begin\n");
+#endif
 	int i;
 	if(Btree_search(root, key) == 0){
 		printf("key = %d existed\n", key);
@@ -160,12 +147,19 @@ int Btree_insert(Btreeroot* root, KeyType key)
 	Btreenode* p = root->node;
 	Btreenode* node = NULL;
 	if(!p){
+#ifdef DEBUG_ON
+		printf("insert tree is empty\n");
+#endif
 		node = Btree_create_node();
 		node->keynum = 1;
 		node->key[0] = key;
+		root->node = node;
 		return 0;
 	}
 	else{
+#ifdef DEBUG_ON
+		printf("insert tree\n");
+#endif
 		node = _find_insert_pos(root, key);
 		if(!node){
 			printf("find insert pos error\n");
@@ -189,11 +183,11 @@ void Btree_print(Btreenode* node, int layer)
 	int i;
 	if(p){
 		printf("\nlayer = %d keynum = %d is_leaf = %d\n", layer, p->keynum, p->is_leaf);
-		for(i = 0; i < p->keynum; i++)
-			printf("%d ", p->key[i]);
+		for(i = 0; i < M_NUM; i++)
+			printf("%c ", p->key[i]);
 		printf("\n");
-		printf("%p ", p->parent);
-		for(i = 0; i <= p->keynum; i++)
+		printf("%p %p\n", p->parent, p);
+		for(i = 0; i <= M_NUM; i++)
 			printf("%p ", p->ptr[i]);
 		printf("\n");
 		layer++;

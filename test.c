@@ -5,7 +5,7 @@
 
 int main()
 {
-	char s[] = "CNGAHEKQMFWLTZDPRXYSJOBU";
+	char s[] = "CNGAHEKQMFWLTZDPRXYSJOBUV";
 	int len = LENGTH(s);
 	int i;
 	s_result res;
@@ -21,6 +21,9 @@ int main()
 	res = Btree_search_node(root->node, 'T');
 	if(res.ptr)
 		printf("%c %p\n", res.ptr->key[res.num], res.ptr);
+	Btree_delete(root, 'U');
+	printf("\nprint begin:\n");
+	Btree_print(root->node, 1);
 	Btree_destory(root->node);
 	return 0;
 }

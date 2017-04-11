@@ -164,35 +164,163 @@ void Btree_print(Btreenode* node, int layer)
 	}
 	else printf("the tree is empty\n");
 }
-/*
-static void _Btree_delete_key(s_result* res)
+void Btree_merge(Btreeroot* root, Btreenode* node, int index)
 {
-	if(!res->ptr){
-		printf("delete node is NULL\n");
-		return;
-	}
-	Btreenode* p = res->ptr;
-	int num = res->num;
 	int i;
-	if(p->is_leaf){
+	Btreenode* left = node->ptr[index];
+	Btreenode* right = node->ptr[index + 1];
+	KeyType key = node->key[index];
 
+	left->key[left->keynum] = key;
+	left->ptr[left->keynum + 1] = right->ptr[0];
+	left->keynum++;
+
+	for(i = 0; i < right->keynum; i++){
+		left->key[left->keynum] = right->key[i];
+		left->ptr[left->keynum + 1] = right->ptr[i + 1];
+		left->keynum++;
 	}
-	else{	//p is leaf
-		for(i = num; i < p->keynum - 1; i++)
-			p->key[i] = p->key[i + 1];
-		p->keynum--;
-		if(p->keynum < (CEIL(M_NUM) - 1))
+
+	for(i = index; i < node->keynum - 1; i++){
+		node->key[i] = node->key[i + 1];
+		node->ptr[i + 1] = node->ptr[i + 2];
+	}
+	node->key[node->keynum - 1] = 0;
+	node->ptr[node->keynum] = NULL;
+	node->keynum--;
+
+	if(node->keynum == 0){
+		root->node = left;
+		free(node);
+	}
+	free(right);
+}
+static void Btree_delete_key(Btreeroot* root, Btreenode* p, KeyType key)
+{
+	int i, index;
+	Btreenode* node = p;
+	Btreenode* tmp = NULL;
+	KeyType tmpkey;
+	if(!node)
+		return;
+	index = 0;
+	while(index < node->keynum && key > node->key[index])
+		index++;
+	if(index < node->keynum && key == node->key[index])
+	{
+		//(1) 关键字key在叶子节点，直接删除
+		if(node->is_leaf){
+			for(i = index; i < node->keynum - 1; i++)
+				node->key[i] = node->key[i + 1];
+			node->key[node->keynum - 1] = 0;
+			node->keynum--;
+			if(node->keynum == 0){
+				free(node);
+				root->node = NULL;
+			}
+			return;
+		}
+		//(2a) node是内节点，左孩子节点至少t个关键字
+		//左孩子的最后一个节点上移至key的位置
+		//删除左孩子的最后一个节点
+		else if(node->ptr[index]->keynum >= BTREE_T){
+			tmp = node->ptr[index];
+			tmpkey = tmp->key[tmp->keynum - 1];
+			node->key[index] = tmpkey;
+			Btree_delete_key(root, tmp, tmpkey);
+		}
+		//(2b) node是内节点，右孩子节点至少t个关键字
+		//右孩子的第一个节点上移至key的位置
+		//删除右孩子的第一个节点
+		else if(node->ptr[index + 1]->keynum >= BTREE_T){
+			tmp = node->ptr[index + 1];
+			tmpkey = node->ptr[index + 1]->key[0];
+			node->key[index] = tmpkey;
+			Btree_delete_key(root, tmp, tmpkey);
+		}
+		//(2c) node是内节点，左右孩子节点都t - 1个关键字
+		//将key的左右孩子和key合并
+		//从合并后节点删除key
+		else{
+			Btree_merge(root, node, index);
+			Btree_delete_key(root, node->ptr[index], key);
+		}
+	}
+	else{
+		Btreenode* left = NULL;
+		Btreenode* right = NULL;
+		Btreenode* child = node->ptr[index];
+		if(!child){
+			printf("Cannot del key = %d\n", key);
+			return;
+		}
+		if(child->keynum == (BTREE_T - 1)){
+			if(index - 1 >= 0)
+				left = node->ptr[index - 1];
+			if(index + 1 <= node->keynum)
+				right = node->ptr[index + 1];
+			//(3a)
+			//相邻左右节点中有至少t个节点
+			//将富裕的邻节点移动一个节点到该子节点
+			if((left && left->keynum >= BTREE_T) ||
+				(right && right->keynum >= BTREE_T))
+			{
+				int richR = 0;
+				if(right)
+					richR = 1;
+				if(left && right)
+					richR = (right->keynum > left->keynum) ? 1 : 0;
+				if(right && right->keynum >= BTREE_T && richR){
+					child->key[child->keynum] = node->key[index];
+					child->ptr[child->keynum + 1] = right->ptr[0];
+					child->keynum++;
+					node->key[index] = right->key[0];
+					for(i = 0; i < right->keynum - 1; i++){
+						right->key[i] = right->key[i + 1];
+						right->ptr[i] = right->ptr[i + 1];
+					}
+					right->key[right->keynum - 1] = 0;
+					right->ptr[right->keynum - 1] = right->ptr[right->keynum];
+					right->ptr[right->keynum] = NULL;
+					right->keynum--;
+				}
+				else{
+					for(i = child->keynum; i > 0; i--){
+						child->key[i] = child->key[i - 1];
+						child->ptr[i + 1] = child->ptr[i];
+					}
+					child->ptr[1] = child->ptr[0];
+					child->ptr[0] = left->ptr[left->keynum];
+					child->key[0] = node->key[index - 1];
+					child->keynum++;
+
+					left->key[left->keynum - 1] = 0;
+					left->ptr[left->keynum]  = NULL;
+					left->keynum--;
+				}
+			}
+			//(3b)
+			//相邻左右节点都只有t - 1个节点
+			//合并节点
+			else if((!left || (left && left->keynum == BTREE_T - 1))
+				&& (!right || (right && right->keynum == BTREE_T - 1)))
+			{
+				if(left && left->keynum == BTREE_T - 1){
+					Btree_merge(root, node, index - 1);
+					child = left;
+				}
+				else if(right && right->keynum == BTREE_T - 1){
+					Btree_merge(root, node, index);
+				}
+			}
+		}
+		Btree_delete_key(root, child, key);
 	}
 }
 int Btree_delete(Btreeroot* root, KeyType key)
 {
 	if(!root->node)
 		return -1;
-	s_result res = Btree_search_node(root->node, key);
-	if(!res.ptr){
-		printf("can not find key = %c", key);
-		return -1;
-	}
-	_Btree_delete_key(&res);
+	Btree_delete_key(root, root->node, key);
 	return 0;
-}*/
+}

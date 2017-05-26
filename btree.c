@@ -3,6 +3,19 @@
 #include <stdlib.h>
 
 //#define DEBUG_ON
+#define DEBUG_ON_RW
+unsigned int write_num = 0;
+#ifdef DEBUG_ON_RW
+void disk_read(Btreenode* x)
+{
+	//printf("disk read\n");
+}
+void disk_write(Btreenode* x)
+{
+	write_num++;
+	//printf("disk write\n");
+}
+#endif
 
 Btreeroot* Btree_create()
 {
@@ -51,6 +64,9 @@ s_result Btree_search_node(Btreenode* node, KeyType key)
 		return (s_result){p, i};
 	if(p->is_leaf)
 		return (s_result){NULL, -1};
+#ifdef DEBUG_ON_RW
+	disk_read(p->ptr[i]);
+#endif
 	return Btree_search_node(p->ptr[i], key);
 }
 int Btree_search(Btreeroot* root, KeyType key)
@@ -91,6 +107,11 @@ void Btree_insert_split(Btreenode* x, int index, Btreenode* y)
 	x->key[i + 1] = y->key[BTREE_T - 1];
 	y->key[BTREE_T - 1] = 0;
 	x->keynum++;
+#ifdef DEBUG_ON_RW
+	disk_write(x);
+	disk_write(y);
+	disk_write(z);
+#endif
 }
 void Btree_insert_nonfull(Btreenode* x, KeyType key)
 {
@@ -105,11 +126,17 @@ void Btree_insert_nonfull(Btreenode* x, KeyType key)
 		}
 		x->key[i + 1] = key;
 		x->keynum++;
+#ifdef DEBUG_ON_RW
+		disk_write(x);
+#endif
 	}
 	else{
 		while(i >= 0 && x->key[i] > key)
 			i--;
 		i++;
+#ifdef DEBUG_ON_RW
+		disk_read(x->ptr[i]);
+#endif
 		if(x->ptr[i]->keynum == (2 * BTREE_T - 1)){
 			Btree_insert_split(x, i, x->ptr[i]);
 			if(key > x->key[i])

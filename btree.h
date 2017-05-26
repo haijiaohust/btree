@@ -1,7 +1,7 @@
 #ifndef _BTREE_H__
 #define _BTREE_H__
 
-#define BTREE_T 3
+#define BTREE_T 73
 
 typedef int KeyType;
 
@@ -20,6 +20,8 @@ typedef struct s_result{
 typedef struct Btreeroot{
 	Btreenode* node;
 }Btreeroot;
+
+extern unsigned int write_num;
 
 Btreeroot* Btree_create();
 Btreenode* Btree_create_node();

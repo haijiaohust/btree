@@ -47,10 +47,15 @@ Btreenode* Btree_create_node()
 void Btree_destory(Btreenode* p)
 {
 	int i;
-	if(!p)
-		return;
-	for(i = 0; i <= p->keynum; i++)
-		Btree_destory(p->ptr[i]);
+	if(p->ptr[0]->is_leaf){
+		for(i = 0; i <= p->keynum; i++)
+			free(p->ptr[i]);
+	}
+	else {
+		for(i = 0; i <= p->keynum; i++)
+			Btree_destory(p->ptr[i]);
+	}
+	free(p);
 }
 s_result Btree_search_node(Btreenode* node, KeyType key)
 {

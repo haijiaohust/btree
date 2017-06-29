@@ -10,15 +10,12 @@ int main()
 	int len = LENGTH(s);
 	int i;
 	s_result res;
-	time_t t;
-	srand((int)time(&t));
+
 	Btreeroot* root = Btree_create();
-	for(i = 0; i < 1048576;){
-		if(!Btree_insert(root, rand()))
+	for(i = 0; i < len;){
+		if(!Btree_insert(root, s[i]))
 			i++;
 	}
-	printf("%u\n", write_num);
-	/*
 	printf("print begin:\n");
 	Btree_print(root->node, 1);
 	res = Btree_search_node(root->node, 'H');
@@ -30,7 +27,6 @@ int main()
 	Btree_delete(root, 'U');
 	printf("\nprint begin:\n");
 	Btree_print(root->node, 1);
-	*/
 	Btree_destory(root->node);
 	return 0;
 }

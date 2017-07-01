@@ -23,7 +23,7 @@ typedef struct Btreeroot{
 
 Btreeroot* Btree_create();
 Btreenode* Btree_create_node();
-void Btree_destory(Btreenode*);
+void Btree_destory(Btreeroot*);
 int Btree_search(Btreeroot*, KeyType);
 int Btree_insert(Btreeroot*, KeyType);
 void Btree_print(Btreenode*, int);

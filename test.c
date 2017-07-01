@@ -27,6 +27,6 @@ int main()
 	Btree_delete(root, 'U');
 	printf("\nprint begin:\n");
 	Btree_print(root->node, 1);
-	Btree_destory(root->node);
+	Btree_destory(root);
 	return 0;
 }

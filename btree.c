@@ -44,7 +44,7 @@ Btreenode* Btree_create_node()
 	p->is_leaf = 1;
 	return p;
 }
-void Btree_destory(Btreenode* p)
+void __Btree_destory(Btreenode* p)
 {
 	int i;
 	if(p->ptr[0]->is_leaf){
@@ -53,9 +53,24 @@ void Btree_destory(Btreenode* p)
 	}
 	else {
 		for(i = 0; i <= p->keynum; i++)
-			Btree_destory(p->ptr[i]);
+			__Btree_destory(p->ptr[i]);
 	}
 	free(p);
+}
+void Btree_destory(Btreeroot* root)
+{
+	Btreenode* p = NULL;
+	if(!root){
+		printf("destory: the tree is error\n");
+		return;
+	}
+	p = root->node;
+	if(!p){
+		printf("destory: the tree is empty\n");
+		return;
+	}
+	__Btree_destory(p);
+	free(root);
 }
 s_result Btree_search_node(Btreenode* node, KeyType key)
 {
